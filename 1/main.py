@@ -46,11 +46,6 @@ def click(dial: int, pos: bool):
         return 1, dial
     
     return 0, dial
-    
-
-
-def mod_count_zeroes():
-    pass
 
 inputs = []
 
