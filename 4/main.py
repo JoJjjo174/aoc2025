@@ -1,6 +1,7 @@
 
 def get_accessable_paper(diagram):
 
+    accessable_locations = []
     accessable = 0
 
     for row_i, row in enumerate(diagram):
@@ -22,12 +23,43 @@ def get_accessable_paper(diagram):
                     if diagram[x][y] == "@":
                         adjecant += 1
 
-            if adjecant < 4 and row[column_i] == "@":       
+            if adjecant < 4 and row[column_i] == "@":
+                accessable_locations.append((row_i, column_i))    
                 accessable += 1
 
+    return accessable, accessable_locations
 
-    return accessable
+def get_accessable_paper_p2(diagram):
+    
+    total_accessable = 0
+    current_diagram = diagram
 
+    while True:
+        amount, locations = get_accessable_paper(current_diagram)
+
+        if amount == 0:
+            break
+        total_accessable += amount
+
+        current_diagram = remove_locations(current_diagram, locations)
+
+    return total_accessable
+
+def remove_locations(diagram, locations):
+    new_diagram = []
+
+    for row_i, row in enumerate(diagram):
+        new_row = row
+        for col_i, col in enumerate(row):
+
+
+            loc = (row_i, col_i)
+            if loc in locations:
+                new_row = new_row[:col_i] + "." + new_row[col_i+1:]
+
+        new_diagram.append(new_row)
+
+    return new_diagram
 
 with open("4/input.txt", "r") as file:
     inp = []
@@ -35,5 +67,9 @@ with open("4/input.txt", "r") as file:
         inp.append(line.rstrip())
 
 print(
-    get_accessable_paper(inp)
+    get_accessable_paper(inp)[0]
+)
+
+print(
+    get_accessable_paper_p2(inp)
 )
