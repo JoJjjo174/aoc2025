@@ -52,7 +52,7 @@ def get_largest_circuits(connections):
             circuits.append([connection[0], connection[1]])
 
     circuits = merge_circuits(circuits)
-    return sorted([len(x) for x in circuits], reverse=True)
+    return sorted(circuits, reverse=True)
 
 def merge_circuits(circuits):
 
@@ -123,8 +123,54 @@ def p1(junction_boxes, connection_amount):
 
     largest_circuits = get_largest_circuits(connections)
 
-    return largest_circuits[0] * largest_circuits[1] * largest_circuits[2]
+    return len(largest_circuits[0]) * len(largest_circuits[1]) * len(largest_circuits[2]), distances, connections
 
+def are_all_included(max_junction_box_id, connections):
+    unpacked_connections = []
+    for connection in connections:
+        unpacked_connections.append(connection[0])
+        unpacked_connections.append(connection[1])
+
+    for i in range(max_junction_box_id+1):
+        if i not in unpacked_connections:
+            return False
+        
+    return True
+
+
+def p2(junction_boxes, p1_distances, p1_connections):
+    distances = p1_distances
+    connections = p1_connections
+
+    max_junction_box_id = max([jb.jid for jb in junction_boxes])
+
+    circuit_amount = float("inf")
+    last_connection = ()
+    all_included = False
+    while circuit_amount > 1 or not all_included:
+
+        if len(distances) == 0:
+            break
+
+        best_connection = distances[0]
+
+        connections.append(
+            (best_connection[0], best_connection[1])
+        )
+        distances.pop(0)
+
+        last_connection = (best_connection[0], best_connection[1])
+        circuit_amount = len(get_largest_circuits(connections))
+        all_included = are_all_included(max_junction_box_id, connections)
+
+        print(f"max {len(distances)} connections remaining..., currently {circuit_amount} circuits")
+
+    jbxs = []
+    for jb in junction_boxes:
+        if jb.jid in last_connection:
+            jbxs.append(jb)
+
+    return jbxs[0].x * jbxs[1].x
 
 junction_boxes = []
 
@@ -135,7 +181,12 @@ with open("8/input.txt", "r") as file:
             Junction_Box(jid, int(x), int(y), int(z))
         )
 
-print( # too low
-    p1(junction_boxes, 1000)
+p1_result, p1_distances, p1_connections = p1(junction_boxes, 1000)
+print(
+    p1_result
+)
+
+print(
+    p2(junction_boxes, p1_distances, p1_connections)
 )
 
