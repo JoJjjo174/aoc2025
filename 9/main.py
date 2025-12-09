@@ -10,8 +10,8 @@ def p1(red_tiles):
             if j <= i:
                 continue
 
-            x_diff = abs(i_location[0] - j_location[0] + 1)
-            y_diff = abs(i_location[1] - j_location[1] + 1)
+            x_diff = abs(i_location[0] - j_location[0]) + 1
+            y_diff = abs(i_location[1] - j_location[1]) + 1
 
             area = x_diff * y_diff
 
@@ -106,8 +106,6 @@ print(
 )
 # 1 540 157 850 too low
 # 
-#
-#
-#
+# 1 540 192 500
 #
 # 1 636 630 590 too high
