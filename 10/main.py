@@ -1,6 +1,4 @@
-import math
-import sys
-import time
+from z3 import Int, Solver, sat
 
 class Machine():
     def __init__(self, required_indicator_lights, buttons, joltage_requirements):
@@ -35,126 +33,61 @@ class Machine():
             i += 1
             combinations = new_combinations
 
-    def set_joltage(self): # too slow
-        start_joltage = tuple([0 for _ in range(len(self.joltage_requirements))])
-        combinations = set()
-        combinations.add(start_joltage)
+    def set_joltage(self):
+        z_buttons = [
+            Int(f"b{i}") for i in range(len(self.buttons))
+        ]
 
-        i = 1
-        while True:
-            new_combinations = set()
-
-            for combination in combinations:
-                list_combination = list(combination)
-
-                for button in self.buttons:
-
-                    combination_cp = list_combination.copy()
-
-                    for wire in button:
-                        combination_cp[wire] += 1
-
-                    equal = True
-                    too_high = False
-                    for j, v in enumerate(combination_cp):
-
-                        if v > self.joltage_requirements[j]:
-                            too_high = True
-                            break
-
-                        if v != self.joltage_requirements[j]:
-                            equal = False
-
-                    if too_high:
-                        continue
-
-                    if equal:
-                        return i
-
-                    new_combinations.add(
-                        tuple(combination_cp)
-                    )
-
-            combinations = new_combinations.copy()
-            i += 1
-
-class Node():
-    def __init__(self, values, goal, buttons, cost):
-        self.cost = cost
-        self.values = values
-        self.goal = goal
-        self.buttons = buttons
-
-        self.heuristic = self.calculate_distance(goal)
-        self.estimated = self.cost + self.heuristic
-    
-    def calculate_distance(self, other_values):
-        a = self.values
-        b = other_values
-
-        subtracted = [v - b[i] for i, v in enumerate(a)]
-        squared = [i ** 2 for i in subtracted]
-
-        added = 0
-        for num in squared:
-            added += num
-
-        return math.sqrt(added)
-    
-    def is_over_goal(self):
-        for i, part in enumerate(self.values):
-            if part > self.goal[i]:
-                return True
-            
-        return False
-    
-    def discover(self):
-        global discovered_nodes
-        #print(self.is_over_goal(), self.heuristic, self.values)
-
-        if self.is_over_goal():
-            return None
-
-        if self.values in discovered_nodes:
-            return None
-        
-        discovered_nodes.append(self.values)
-
-        #if self.values in self.already_found:
-        #    return False, self.already_found
-
-        if self.heuristic == 0:
-            return 0#, self.already_found
-        
-        options = []
-        for button in self.buttons:
-            
-            values_cp = self.values.copy()
-
+        button_constraints_dict = {}
+        for i, button in enumerate(self.buttons):
             for wire in button:
-                values_cp[wire] += 1
+                
+                if wire in button_constraints_dict:
+                    button_constraints_dict[wire] += z_buttons[i]
 
-            new_cost = self.cost + self.calculate_distance(values_cp)
+                else:
+                    button_constraints_dict[wire] = z_buttons[i]
 
-            options.append(
-                Node(values_cp.copy(), self.goal, self.buttons, new_cost)
+        button_constraints = [
+            self.joltage_requirements[k] == button_constraints_dict[k] for k in button_constraints_dict
+        ]
+
+        total = Int("t")
+        total_parts = None
+
+        for z_button in z_buttons:
+            if total_parts is not None:
+                total_parts += z_button
+
+            else:
+                total_parts = z_button
+
+        total_constraint = [
+            total == total_parts
+        ]
+
+        above_zero_constraints = [
+            i >= 0 for i in z_buttons
+        ]
+
+        s = Solver()
+
+        s.add(button_constraints)
+        s.add(total_constraint)
+        s.add(above_zero_constraints)
+
+        all_solutions = []
+
+        while s.check() == sat:
+            model = s.model()
+            sol = model[total].as_long()
+            all_solutions.append(sol)
+
+            s.add(
+                total != sol
             )
 
-        for node in sorted(options):
-            res = node.discover()
-            if res is not None:
-                return res + 1#, self.already_found
-            
-        return None
-
-    def __repr__(self):
-        return self.estimated
-    
-    def __lt__(self, other):
-        return self.estimated < other.estimated
-    
-    def __gt__(self, other):
-        return self.estimated > other.estimated
+        return min(all_solutions)
 
 def p1(machines):
 
@@ -166,29 +99,9 @@ def p1(machines):
 
 def p2(machines):
 
-    print("--------------------------")
-
     total = 0
-    for i, machine in enumerate(machines):
-        print(f"{(i/len(machines))*100:.2f}%")
-        total += machine.set_joltage()
-
-    print("--------------------------")
-
-    return total
-
-def p2_astar(machines):
-
-    total = 0
-
     for machine in machines:
-        start = [0 for _ in range(len(machine.joltage_requirements))]
-        start_node = Node(start, machine.joltage_requirements, machine.buttons, 0)
-
-        v = start_node.discover()
-        print(f"+ {v}")
-
-        total += v
+        total += machine.set_joltage()
 
     return total
 
@@ -209,18 +122,6 @@ print(
     p1(machines)
 )
 
-#print(
-#    p2(machines)
-#)
-
-sys.setrecursionlimit(10000000)
-
-discovered_nodes = []
-
-s = time.perf_counter()
 print(
-    p2_astar(machines)
+    p2(machines)
 )
-e = time.perf_counter()
-
-print(f"time: {(e-s)*1000:.2f}ms")
